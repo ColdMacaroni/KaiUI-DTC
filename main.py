@@ -3,16 +3,92 @@
 # 2022-05-25
 
 from PySide6 import QtWidgets
-from enum import Flag, auto
+from enum import Flag, Enum, auto
 
-class ProductAttributes(Flag):
+class SushiType(Enum):
+    PIECES = auto()
+    BOWL = auto()
+
+class ProductAttribute(Flag):
     DEFAULT = auto()
-    VEGAN_OPTION = auto()
-    VEGETARIAN_OPTION = auto()
+    NONE = auto()
+    VEGAN = auto()
+    VEGETARIAN = auto()
     HAS_SUGAR = auto()
 
-class Product():
-    def __init__(self)
+class Day(Flag):
+    MONDAY = auto()
+    TUESDAY = auto()
+    WEDNESDAY = auto()
+    THURSDAY = auto()
+    FRIDAY = auto()
+    SATURDAY = auto()
+    SUNDAY = auto()
+
+class Product:
+    def __init__(self, name: str, price: float, options: ProductAttribute = ProductAttribute.DEFAULT, attributes: ProductAttribute = ProductAttribute.DEFAULT):
+        self.options = options | ProductAttribute.DEFAULT
+        self.attributes = attributes | ProductAttribute.DEFAULT
+        self.name = name
+        self.price = price
+    
+    @property
+    def name(self):
+        return self._name
+    
+    @name.setter
+    def name(self, new):
+        if not isinstance(new, str):
+            raise ValueError("Name must be type string")
+        self._name = new
+
+    @property
+    def price(self):
+        return self._price
+
+    @price.setter
+    def price(self, new):
+        if not isinstance(new, float):
+            raise ValueError("Price must be type float")
+        self._price = new
+
+    @property
+    def attributes(self):
+        return self._attributes
+
+    @attributes.setter
+    def attributes(self, new):
+        if not isinstance(new, ProductAttribute):
+            raise ValueError("Attribute must be type ProductAttribure")
+        self._attribute = new
+    
+class Sandwich(Product):
+    pass
+
+class Sushi(Product):
+    def __init__(self, type_: SushiType, *args, pieces: int = 0):
+        super().__init__(*args)
+        self.type = type_
+
+        if self.type is SushiType.PIECES:
+            self.pieces = pieces
+
+class Drinks(Product):
+    pass
+
+class Special(Product):
+    def __init__(self, day: Day):
+        self.day = day
+
+    @property
+    def day(self):
+        return self._day
+
+    @day.setter
+    def day(self, new):
+        if not isinstance(new, Day):
+            raise ValueError("Day must be type Day")
+        self._day = new
 
 class KaiUI(QtWidgets.QMainWindow):
     def __init__(self, *args):
@@ -25,6 +101,23 @@ class KaiUI(QtWidgets.QMainWindow):
  
 
 def main():
+
+    sandwiches = [
+        Sandwich("Ham & egg sandwich", 3.50),
+        Sandwich("Chicken mayo sandwich", 3.50),
+        Sandwich("Egg sandwich", 3.00, ProductAttribute.VEGETARIAN),
+        Sandwich("Beef sandwich", 3.80),
+        Sandwich("Salad sandwich", 3.20, ProductAttribute.VEGAN, ProductAttribute.VEGETARIAN),
+    ]
+
+    sushi = [
+        Sushi(SushiType.PIECES, "Chicken", 4.5, pieces=3),
+        Sushi(SushiType.PIECES, "Tuna", 4.5, pieces=3),
+        Sushi(SushiType.PIECES, "Avocado", 4.8, ProductAttribute.VEGAN, ProductAttribute.VEGETARIAN, pieces=3),
+        Sushi(SushiType.BOWL, "Chicken rice", 5.5, pieces=3),
+        Sushi(SushiType.BOWL, "Vegetarian rice", 5.5, pieces=3),
+    ]
+
     app = QtWidgets.QApplication()
     main = KaiUI()
 
