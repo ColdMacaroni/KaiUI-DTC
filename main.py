@@ -10,7 +10,6 @@ class SushiType(Enum):
     BOWL = auto()
 
 class ProductAttribute(Flag):
-    DEFAULT = auto()
     NONE = auto()
     VEGAN = auto()
     VEGETARIAN = auto()
@@ -26,9 +25,8 @@ class Day(Flag):
     SUNDAY = auto()
 
 class Product:
-    def __init__(self, name: str, price: float, options: ProductAttribute = ProductAttribute.DEFAULT, attributes: ProductAttribute = ProductAttribute.DEFAULT):
-        self.options = options | ProductAttribute.DEFAULT
-        self.attributes = attributes | ProductAttribute.DEFAULT
+    def __init__(self, name: str, price: float, attributes: ProductAttribute = ProductAttribute.NONE):
+        self.attributes = attributes | ProductAttribute.NONE
         self.name = name
         self.price = price
     
@@ -73,11 +71,12 @@ class Sushi(Product):
         if self.type is SushiType.PIECES:
             self.pieces = pieces
 
-class Drinks(Product):
+class Drink(Product):
     pass
 
 class Special(Product):
-    def __init__(self, day: Day):
+    def __init__(self, day: Day, *args):
+        super().__init__(*args)
         self.day = day
 
     @property
@@ -107,16 +106,28 @@ def main():
         Sandwich("Chicken mayo sandwich", 3.50),
         Sandwich("Egg sandwich", 3.00, ProductAttribute.VEGETARIAN),
         Sandwich("Beef sandwich", 3.80),
-        Sandwich("Salad sandwich", 3.20, ProductAttribute.VEGAN, ProductAttribute.VEGETARIAN),
+        Sandwich("Salad sandwich", 3.20, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN),
     ]
 
     sushi = [
         Sushi(SushiType.PIECES, "Chicken", 4.5, pieces=3),
         Sushi(SushiType.PIECES, "Tuna", 4.5, pieces=3),
-        Sushi(SushiType.PIECES, "Avocado", 4.8, ProductAttribute.VEGAN, ProductAttribute.VEGETARIAN, pieces=3),
+        Sushi(SushiType.PIECES, "Avocado", 4.8, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN, pieces=3),
         Sushi(SushiType.BOWL, "Chicken rice", 5.5, pieces=3),
-        Sushi(SushiType.BOWL, "Vegetarian rice", 5.5, pieces=3),
+        Sushi(SushiType.BOWL, "Vegetarian rice", 5.5, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN)
     ]
+
+    drinks = [
+        Drink("Soda can", 2.00, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
+        Drink("Aloe vera drink", 3.50, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
+        Drink("Chocolate Milk", 3.50, ProductAttribute.HAS_SUGAR),
+        Drink("Water Bottle", 2.50, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN),
+        Drink("Instant hot chocolate", 1.50, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR)
+    ]
+
+    specials = [
+        Special()
+        ]
 
     app = QtWidgets.QApplication()
     main = KaiUI()
@@ -165,7 +176,7 @@ def main():
 # Café information
 # Products
 
-# All products are divided into three categories:
+    # All products are divided into three categories:
 
 #     sandwiches
 #     sushi
