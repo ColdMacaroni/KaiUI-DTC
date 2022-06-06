@@ -89,7 +89,7 @@ class Special(Product):
             raise ValueError("Day must be type Day")
         self._day = new
 
-class ProductInfo(QtWidgets.QWidget):
+class ProductInfo(QtWidgets.QFrame):
     def __init__(self, product: Product, *args):
         super().__init__(*args)
         
@@ -98,17 +98,33 @@ class ProductInfo(QtWidgets.QWidget):
         self.product = product
         self.type = type(product)
         
+        # Use a central widget of sorts so that the frame occupies the full width
+        self.main_widget = QtWidgets.QWidget()
+
         # TODO: Image label
         # self.img_label = QtWidgets.QLabel()
-        self.name_label = QtWidgets.QLabel(self)
-        self.price_label = QtWidgets.QLabel(self)
-        self.vegetarian_label = QtWidgets.QLabel(self)
-        self.vegan_label = QtWidgets.QLabel(self)
-        self.has_sugar_label = QtWidgets.QLabel(self)
+        # self.name_label = QtWidgets.QLabel(self)
+        # self.price_label = QtWidgets.QLabel(self)
+        # self.vegetarian_label = QtWidgets.QLabel(self)
+        # self.vegan_label = QtWidgets.QLabel(self)
+        # self.has_sugar_label = QtWidgets.QLabel(self)
+
+        self.name_label = QtWidgets.QLabel(self.main_widget)
+        self.price_label = QtWidgets.QLabel(self.main_widget)
+        self.vegetarian_label = QtWidgets.QLabel(self.main_widget)
+        self.vegan_label = QtWidgets.QLabel(self.main_widget)
+        self.has_sugar_label = QtWidgets.QLabel(self.main_widget)
         self.initUI()
 
-
     def initUI(self):
+        self.setFrameStyle(QtWidgets.QFrame.StyledPanel)
+        
+        # If the top margin is 1, it just disappears for some reason
+        # Setting it to 5 makes it constistently appear
+        self.setContentsMargins(1, 5, 1 ,1)
+        # self.setLineWidth(2)        
+
+        # Set up labels
         self.name_label.setText(self.product.name)
         self.name_label.setStyleSheet("font-size: 15pt")
         
@@ -120,7 +136,10 @@ class ProductInfo(QtWidgets.QWidget):
 
         self.has_sugar_label.setText(f"Sugar: {'✅' if self.product.attributes & ProductAttribute.HAS_SUGAR else '❎'}")
 
+        # Shove em all into a layout
         vbox = QtWidgets.QVBoxLayout()
+
+        # These keeps them all compact and stops them from being stretched
         vbox.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
         
         vbox.addWidget(self.name_label)
@@ -129,7 +148,11 @@ class ProductInfo(QtWidgets.QWidget):
         vbox.addWidget(self.vegan_label)
         vbox.addWidget(self.has_sugar_label)
         
-        self.setLayout(vbox)
+        # This is the central widget
+        self.setLayout(QtWidgets.QVBoxLayout())
+        self.layout().addWidget(self.main_widget)
+
+        self.main_widget.setLayout(vbox)
         self.show()
 
 class KaiUI(QtWidgets.QMainWindow):
@@ -174,9 +197,19 @@ class KaiUI(QtWidgets.QMainWindow):
         Adds all the necessary widgets from the products dict to the products tab QWidget
         that has the same key
         """
-        # TODO
-        ...
+        tab_widg = self.products_tab_widgets[key]
+        
+        sub_products = self.products[key]
+        vbox = QtWidgets.QVBoxLayout()
+        
+        # TODO: Add buttons for add to order
+        # TODO: IMPORTANT - Add a scrollbar to this- doesn't fit on my 1366x768 screen
+        for p in sub_products:
+            widg = ProductInfo(p)
+            vbox.addWidget(widg)
+            # vbox.addSpacing(1)
 
+        tab_widg.setLayout(vbox)
 
     def initUI(self):
         self.setWindowTitle("Kai")
@@ -188,13 +221,17 @@ class KaiUI(QtWidgets.QMainWindow):
         for name, widg in self.products_tab_widgets.items():
             self.products_tab.addTab(widg, name.capitalize())
 
+            self.setup_tab_widget(name)            
+
         # Setting up central widget things
         self.setCentralWidget(QtWidgets.QWidget(self))
+        
         # Main layout
-        vbox = QtWidgets.QVBoxLayout()
-        vbox.addWidget(self.products_tab)        
+        hbox = QtWidgets.QHBoxLayout()
+        hbox.addWidget(self.products_tab)
+        #TODO: On the right of these tabs put all the buttons and stuff        
 
-        self.centralWidget().setLayout(vbox)
+        self.centralWidget().setLayout(hbox)
         
     ## Setters/Setters
     @property
@@ -214,6 +251,7 @@ class KaiUI(QtWidgets.QMainWindow):
 def main():
 
     # NOTE: This is probably better done with a ProductCategory class but whatever
+    # TODO: Put all of this into a json, its giving me a headache just looking at it
     sandwiches = [
         Sandwich("Ham & egg sandwich", 3.50),
         Sandwich("Chicken mayo sandwich", 3.50),
@@ -247,12 +285,11 @@ def main():
     ]
 
     app = QtWidgets.QApplication()
-    main = KaiUI({
-        "sandwiches": sandwiches, "sushi": sushi, "drinks": drinks, "specials": specials})
-
+    main = KaiUI({"sandwiches": sandwiches, "sushi": sushi, "drinks": drinks, "specials": specials})
+    
     main.show()
     app.exec()
-    
+
 if __name__ == "__main__":
     main()
 # Onslow College is revamping the menu at the café. There will be a move to
