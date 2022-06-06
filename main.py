@@ -2,7 +2,6 @@
 # main.py
 # 2022-05-25
 
-from itertools import product
 from PySide6 import QtWidgets, QtCore
 from enum import Flag, Enum, auto
 
@@ -59,7 +58,7 @@ class Product:
     def attributes(self, new):
         if not isinstance(new, ProductAttribute):
             raise ValueError("Attribute must be type ProductAttribure")
-        self._attribute = new
+        self._attributes = new
     
 class Sandwich(Product):
     pass
@@ -89,6 +88,49 @@ class Special(Product):
         if not isinstance(new, Day):
             raise ValueError("Day must be type Day")
         self._day = new
+
+class ProductInfo(QtWidgets.QWidget):
+    def __init__(self, product: Product, *args):
+        super().__init__(*args)
+        
+        # Im not gonna bother with a setter because i think its better if it just doesnt change
+        assert isinstance(product, Product), f"{product} should be type an instance of Product"
+        self.product = product
+        self.type = type(product)
+        
+        # TODO: Image label
+        # self.img_label = QtWidgets.QLabel()
+        self.name_label = QtWidgets.QLabel(self)
+        self.price_label = QtWidgets.QLabel(self)
+        self.vegetarian_label = QtWidgets.QLabel(self)
+        self.vegan_label = QtWidgets.QLabel(self)
+        self.has_sugar_label = QtWidgets.QLabel(self)
+        self.initUI()
+
+
+    def initUI(self):
+        self.name_label.setText(self.product.name)
+        self.name_label.setStyleSheet("font-size: 15pt")
+        
+        self.price_label.setText(f"${self.product.price:.02f}")
+        
+        self.vegetarian_label.setText(f"Vegetarian: {'✅' if self.product.attributes & ProductAttribute.VEGETARIAN else '❎'}")
+
+        self.vegan_label.setText(f"Vegan: {'✅' if self.product.attributes & ProductAttribute.VEGAN else '❎'}")
+
+        self.has_sugar_label.setText(f"Sugar: {'✅' if self.product.attributes & ProductAttribute.HAS_SUGAR else '❎'}")
+
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        
+        vbox.addWidget(self.name_label)
+        vbox.addWidget(self.price_label)
+        vbox.addWidget(self.vegetarian_label)
+        vbox.addWidget(self.vegan_label)
+        vbox.addWidget(self.has_sugar_label)
+        
+        self.setLayout(vbox)
+        self.show()
 
 class KaiUI(QtWidgets.QMainWindow):
     # Which keys the products dict can have, also used for creating the tabs
@@ -127,6 +169,15 @@ class KaiUI(QtWidgets.QMainWindow):
 
         self.initUI()
 
+    def setup_tab_widget(self, key):
+        """
+        Adds all the necessary widgets from the products dict to the products tab QWidget
+        that has the same key
+        """
+        # TODO
+        ...
+
+
     def initUI(self):
         self.setWindowTitle("Kai")
         
@@ -134,9 +185,9 @@ class KaiUI(QtWidgets.QMainWindow):
         self.setGeometry(QtCore.QRect(200, 100, 800, 600))
  
         # Set tab names, and add a tab to the thing
-        for name in self.products_tab_widgets.keys():
-            self.products_tab.addTab(self.products_tab_widgets[name], name.capitalize())
- 
+        for name, widg in self.products_tab_widgets.items():
+            self.products_tab.addTab(widg, name.capitalize())
+
         # Setting up central widget things
         self.setCentralWidget(QtWidgets.QWidget(self))
         # Main layout
