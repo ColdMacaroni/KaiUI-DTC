@@ -2,7 +2,8 @@
 # main.py
 # 2022-05-25
 
-from PySide6 import QtWidgets
+from itertools import product
+from PySide6 import QtWidgets, QtCore
 from enum import Flag, Enum, auto
 
 class SushiType(Enum):
@@ -75,7 +76,7 @@ class Drink(Product):
     pass
 
 class Special(Product):
-    def __init__(self, day: Day, *args):
+    def __init__(self, day: Day, country: str, *args):
         super().__init__(*args)
         self.day = day
 
@@ -90,17 +91,78 @@ class Special(Product):
         self._day = new
 
 class KaiUI(QtWidgets.QMainWindow):
-    def __init__(self, *args):
-        super()._init__(*args)
+    # Which keys the products dict can have, also used for creating the tabs
+    _ACCEPTABLE_KEYS = ["sandwiches", "sushi", "drinks", "specials"]
+
+    @classmethod
+    @property
+    def ACCEPTABLE_KEYS(cls) -> list[str]:
+        """
+        This getter is here to avoid accidentally changing the const. It's a list
+        so things can get messy. Actually its not that it'd change much.
+        It should probably return a .copy() but idk about creating so many lists.
+        It just doesnt sit right, you know?
+        """
+        return cls._ACCEPTABLE_KEYS
+
+    def __init__(self, products: dict[str, list[Sandwich | Sushi | Drink | Special]], *args):
+        """
+        This init only creates the objects needed for the ui, method initUI creates the layouts and
+        actually fits everything together.
+        """
+        # Do the thing
+        super().__init__(*args)
+        
+        # 'Declare' the private one to avoid any possible issues with the setter
+        self._products = {}
+        self.products = products
+
+        self.products_tab = QtWidgets.QTabWidget(self)
+        
+        # A QWidget for every possible tab
+        self.products_tab_widgets = {
+            key: QtWidgets.QWidget()
+            for key in self.ACCEPTABLE_KEYS
+        }
 
         self.initUI()
 
     def initUI(self):
-        ...
+        self.setWindowTitle("Kai")
+        
+        # Make it a *nice* window size
+        self.setGeometry(QtCore.QRect(200, 100, 800, 600))
  
+        # Set tab names, and add a tab to the thing
+        for name in self.products_tab_widgets.keys():
+            self.products_tab.addTab(self.products_tab_widgets[name], name.capitalize())
+ 
+        # Setting up central widget things
+        self.setCentralWidget(QtWidgets.QWidget(self))
+        # Main layout
+        vbox = QtWidgets.QVBoxLayout()
+        vbox.addWidget(self.products_tab)        
+
+        self.centralWidget().setLayout(vbox)
+        
+    ## Setters/Setters
+    @property
+    def products(self):
+        return self._products
+    
+    @products.setter
+    def products(self, products: dict[str, list[Sandwich | Sushi | Drink | Special]]):
+        # NOTE: This is probably better done with a ProductCategory class but whatever
+        for key in products.keys():
+            assert key in self.ACCEPTABLE_KEYS, f"'{key}' is an unacceptable key."
+            
+        # All goods
+        self._products = products
+
 
 def main():
 
+    # NOTE: This is probably better done with a ProductCategory class but whatever
     sandwiches = [
         Sandwich("Ham & egg sandwich", 3.50),
         Sandwich("Chicken mayo sandwich", 3.50),
@@ -126,14 +188,22 @@ def main():
     ]
 
     specials = [
-        Special()
-        ]
+        Special(Day.MONDAY,    "Samoa", "Kale moa",             6.00, ProductAttribute.HAS_SUGAR),
+        Special(Day.TUESDAY,   "South Africa", "Potjiekos",     6.00, ProductAttribute.NONE),
+        Special(Day.WEDNESDAY, "New Zealand (Māori)", "Hangi",  6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN),
+        Special(Day.THURSDAY,  "India", "Paneer tikka masala",  6.00, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
+        Special(Day.FRIDAY,    "China", "Chow mein",            6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN)
+    ]
 
     app = QtWidgets.QApplication()
-    main = KaiUI()
+    main = KaiUI({
+        "sandwiches": sandwiches, "sushi": sushi, "drinks": drinks, "specials": specials})
 
     main.show()
     app.exec()
+    
+if __name__ == "__main__":
+    main()
 # Onslow College is revamping the menu at the café. There will be a move to
 # healthy options that reflect the diversity of the student body. This includes
 # daily special items.
