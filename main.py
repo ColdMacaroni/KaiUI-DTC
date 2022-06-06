@@ -5,15 +5,18 @@
 from PySide6 import QtWidgets, QtCore
 from enum import Flag, Enum, auto
 
+
 class SushiType(Enum):
     PIECES = auto()
     BOWL = auto()
+
 
 class ProductAttribute(Flag):
     NONE = auto()
     VEGAN = auto()
     VEGETARIAN = auto()
     HAS_SUGAR = auto()
+
 
 class Day(Flag):
     MONDAY = auto()
@@ -24,16 +27,22 @@ class Day(Flag):
     SATURDAY = auto()
     SUNDAY = auto()
 
+
 class Product:
-    def __init__(self, name: str, price: float, attributes: ProductAttribute = ProductAttribute.NONE):
+    def __init__(
+        self,
+        name: str,
+        price: float,
+        attributes: ProductAttribute = ProductAttribute.NONE,
+    ):
         self.attributes = attributes | ProductAttribute.NONE
         self.name = name
         self.price = price
-    
+
     @property
     def name(self):
         return self._name
-    
+
     @name.setter
     def name(self, new):
         if not isinstance(new, str):
@@ -59,9 +68,11 @@ class Product:
         if not isinstance(new, ProductAttribute):
             raise ValueError("Attribute must be type ProductAttribure")
         self._attributes = new
-    
+
+
 class Sandwich(Product):
     pass
+
 
 class Sushi(Product):
     def __init__(self, type_: SushiType, *args, pieces: int = 0):
@@ -71,8 +82,10 @@ class Sushi(Product):
         if self.type is SushiType.PIECES:
             self.pieces = pieces
 
+
 class Drink(Product):
     pass
+
 
 class Special(Product):
     def __init__(self, day: Day, country: str, *args):
@@ -89,15 +102,18 @@ class Special(Product):
             raise ValueError("Day must be type Day")
         self._day = new
 
+
 class ProductInfo(QtWidgets.QFrame):
     def __init__(self, product: Product, *args):
         super().__init__(*args)
-        
+
         # Im not gonna bother with a setter because i think its better if it just doesnt change
-        assert isinstance(product, Product), f"{product} should be type an instance of Product"
+        assert isinstance(
+            product, Product
+        ), f"{product} should be type an instance of Product"
         self.product = product
         self.type = type(product)
-        
+
         # Use a central widget of sorts so that the frame occupies the full width
         self.main_widget = QtWidgets.QWidget()
 
@@ -118,42 +134,49 @@ class ProductInfo(QtWidgets.QFrame):
 
     def initUI(self):
         self.setFrameStyle(QtWidgets.QFrame.StyledPanel)
-        
+
         # If the top margin is 1, it just disappears for some reason
         # Setting it to 5 makes it constistently appear
-        self.setContentsMargins(1, 5, 1 ,1)
-        # self.setLineWidth(2)        
+        self.setContentsMargins(1, 5, 1, 1)
+        # self.setLineWidth(2)
 
         # Set up labels
         self.name_label.setText(self.product.name)
         self.name_label.setStyleSheet("font-size: 15pt")
-        
+
         self.price_label.setText(f"${self.product.price:.02f}")
-        
-        self.vegetarian_label.setText(f"Vegetarian: {'✅' if self.product.attributes & ProductAttribute.VEGETARIAN else '❎'}")
 
-        self.vegan_label.setText(f"Vegan: {'✅' if self.product.attributes & ProductAttribute.VEGAN else '❎'}")
+        self.vegetarian_label.setText(
+            f"Vegetarian: {'✅' if self.product.attributes & ProductAttribute.VEGETARIAN else '❎'}"
+        )
 
-        self.has_sugar_label.setText(f"Sugar: {'✅' if self.product.attributes & ProductAttribute.HAS_SUGAR else '❎'}")
+        self.vegan_label.setText(
+            f"Vegan: {'✅' if self.product.attributes & ProductAttribute.VEGAN else '❎'}"
+        )
+
+        self.has_sugar_label.setText(
+            f"Sugar: {'✅' if self.product.attributes & ProductAttribute.HAS_SUGAR else '❎'}"
+        )
 
         # Shove em all into a layout
         vbox = QtWidgets.QVBoxLayout()
 
         # These keeps them all compact and stops them from being stretched
         vbox.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
-        
+
         vbox.addWidget(self.name_label)
         vbox.addWidget(self.price_label)
         vbox.addWidget(self.vegetarian_label)
         vbox.addWidget(self.vegan_label)
         vbox.addWidget(self.has_sugar_label)
-        
+
         # This is the central widget
         self.setLayout(QtWidgets.QVBoxLayout())
         self.layout().addWidget(self.main_widget)
 
         self.main_widget.setLayout(vbox)
         self.show()
+
 
 class KaiUI(QtWidgets.QMainWindow):
     # Which keys the products dict can have, also used for creating the tabs
@@ -170,24 +193,25 @@ class KaiUI(QtWidgets.QMainWindow):
         """
         return cls._ACCEPTABLE_KEYS
 
-    def __init__(self, products: dict[str, list[Sandwich | Sushi | Drink | Special]], *args):
+    def __init__(
+        self, products: dict[str, list[Sandwich | Sushi | Drink | Special]], *args
+    ):
         """
         This init only creates the objects needed for the ui, method initUI creates the layouts and
         actually fits everything together.
         """
         # Do the thing
         super().__init__(*args)
-        
+
         # 'Declare' the private one to avoid any possible issues with the setter
         self._products = {}
         self.products = products
 
         self.products_tab = QtWidgets.QTabWidget(self)
-        
+
         # A QWidget for every possible tab
         self.products_tab_widgets = {
-            key: QtWidgets.QWidget()
-            for key in self.ACCEPTABLE_KEYS
+            key: QtWidgets.QWidget() for key in self.ACCEPTABLE_KEYS
         }
 
         self.initUI()
@@ -198,10 +222,10 @@ class KaiUI(QtWidgets.QMainWindow):
         that has the same key
         """
         tab_widg = self.products_tab_widgets[key]
-        
+
         sub_products = self.products[key]
         vbox = QtWidgets.QVBoxLayout()
-        
+
         # TODO: Add buttons for add to order
         # TODO: IMPORTANT - Add a scrollbar to this- doesn't fit on my 1366x768 screen
         for p in sub_products:
@@ -213,37 +237,37 @@ class KaiUI(QtWidgets.QMainWindow):
 
     def initUI(self):
         self.setWindowTitle("Kai")
-        
+
         # Make it a *nice* window size
         self.setGeometry(QtCore.QRect(200, 100, 800, 600))
- 
+
         # Set tab names, and add a tab to the thing
         for name, widg in self.products_tab_widgets.items():
             self.products_tab.addTab(widg, name.capitalize())
 
-            self.setup_tab_widget(name)            
+            self.setup_tab_widget(name)
 
         # Setting up central widget things
         self.setCentralWidget(QtWidgets.QWidget(self))
-        
+
         # Main layout
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.products_tab)
-        #TODO: On the right of these tabs put all the buttons and stuff        
+        # TODO: On the right of these tabs put all the buttons and stuff
 
         self.centralWidget().setLayout(hbox)
-        
+
     ## Setters/Setters
     @property
     def products(self):
         return self._products
-    
+
     @products.setter
     def products(self, products: dict[str, list[Sandwich | Sushi | Drink | Special]]):
         # NOTE: This is probably better done with a ProductCategory class but whatever
         for key in products.keys():
             assert key in self.ACCEPTABLE_KEYS, f"'{key}' is an unacceptable key."
-            
+
         # All goods
         self._products = products
 
@@ -252,6 +276,7 @@ def main():
 
     # NOTE: This is probably better done with a ProductCategory class but whatever
     # TODO: Put all of this into a json, its giving me a headache just looking at it
+    # fmt:off
     sandwiches = [
         Sandwich("Ham & egg sandwich", 3.50),
         Sandwich("Chicken mayo sandwich", 3.50),
@@ -283,92 +308,21 @@ def main():
         Special(Day.THURSDAY,  "India", "Paneer tikka masala",  6.00, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
         Special(Day.FRIDAY,    "China", "Chow mein",            6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN)
     ]
+    # fmt:on
 
     app = QtWidgets.QApplication()
-    main = KaiUI({"sandwiches": sandwiches, "sushi": sushi, "drinks": drinks, "specials": specials})
-    
+    main = KaiUI(
+        {
+            "sandwiches": sandwiches,
+            "sushi": sushi,
+            "drinks": drinks,
+            "specials": specials,
+        }
+    )
+
     main.show()
     app.exec()
 
+
 if __name__ == "__main__":
     main()
-# Onslow College is revamping the menu at the café. There will be a move to
-# healthy options that reflect the diversity of the student body. This includes
-# daily special items.
-
-# More importantly, students will be able to order food via an app loaded on
-# computers placed all around the school. The order will be sent to the café for
-# the students to collect at either interval or lunch time.
-
-# You will create the software for students to make orders.
-# User interface
-
-# The interface should display the following:
-
-#     a list of products, divided by product category
-#     information about the products
-#         whether it is vegetarian-friendly or has vegetarian options
-#         whether it is vegan-friendly or has vegetarian options
-#         whether it contains added sugar
-#         the country of origin (for special items)
-#     the cost of the products
-#     the current day (which should be selectable) that shows the special item of the day
-
-# The interface will allow the user to do the following:
-
-#     add an item to their order
-#     remove an item from their order
-#     calculate the total cost of the order
-#     send the order to the café for processing
-
-# You may lay the interface out however you like.
-# Object-oriented programming
-
-# You should create classes for the following aspects of the program:
-
-#     Product: contains the information about the product
-#     ProductCategory: contains the products by category
-#     Order: contains the contents of the order
-
-# Remember to create relevant properties, setters, and methods.
-# Café information
-# Products
-
-    # All products are divided into three categories:
-
-#     sandwiches
-#     sushi
-#     drinks
-#     special items of the day
-
-# Sandwiches
-# Item 	V option available 	VG option available 	Contains sugar 	Price
-# Ham & egg sandwich 	  	  	  	$3.50
-# Chicken mayo sandwich 	  	  	  	$3.50
-# Egg sandwich 	✅ 	  	  	$3.00
-# Beef sandwich 	  	  	  	$3.80
-# Salad sandwich 	✅ 	✅ 	  	$3.20
-# Sushi
-
-# Item 	V option available 	VG option available 	Contains sugar 	Price
-# Chicken (3pc) 	  	  	  	$4.50
-# Tuna (3pc) 	  	  	  	$4.50
-# Avocado sushi (3pc) 	✅ 	✅ 	  	$4.80
-# Chicken rice bowl 	  	  	  	$5.50
-# Vegetarian rice bowl 	✅ 	✅ 	  	$5.50
-# Drinks
-# Item 	V option available 	VG option available 	Contains sugar 	Price
-# Soda can 	✅ 	✅ 	✅ 	$2.00
-# Aloe vera drink 	✅ 	  	✅ 	$3.50
-# Chocolate milk 	  	  	✅ 	$3.50
-# Water bottle 	✅ 	✅ 	  	$2.50
-# Instant hot chocolate 	✅ 	  	✅ 	$1.50
-# Special items of the day
-
-# The following items can only be ordered on specific days.
-# Day 	Item 	V option available 	VG option available 	Contains sugar 	Price
-# Monday 	Kale moa 	  	  	✅ 	$6.00
-# Tuesday 	Potjiekos 	  	  	  	$6.00
-# Wednesday 	Hangi 	✅ 	✅ 	  	$6.00
-# Thursday 	Paneer tikka masala 	✅ 	  	✅ 	$6.00
-# Friday 	Chow mein 	✅ 	✅ 	  	$6.00
