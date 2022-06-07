@@ -227,17 +227,22 @@ class KaiUI(QtWidgets.QMainWindow):
         """
         tab_widg = self.products_tab_widgets[key]
 
+        tab_widg.setLayout(QtWidgets.QVBoxLayout())
+        tab_scroll = QtWidgets.QScrollArea(tab_widg)
+        tab_scroll.setWidget(QtWidgets.QWidget(tab_scroll))
+        tab_widg.layout().addWidget(tab_scroll)
+
         sub_products = self.products[key]
         vbox = QtWidgets.QVBoxLayout()
 
         # TODO: Add buttons for add to order
         # TODO: IMPORTANT - Add a scrollbar to this- doesn't fit on my 1366x768 screen
         for p in sub_products:
-            widg = ProductInfo(p, tab_widg)
+            widg = ProductInfo(p, tab_scroll)
             vbox.addWidget(widg)
             # vbox.addSpacing(1)
-
-        tab_widg.setLayout(vbox)
+        
+        tab_scroll.widget().setLayout(vbox)
 
     def initUI(self):
         self.setWindowTitle("Kai")
