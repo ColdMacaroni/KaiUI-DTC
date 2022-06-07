@@ -211,8 +211,12 @@ class KaiUI(QtWidgets.QMainWindow):
 
         # A QWidget for every possible tab
         self.products_tab_widgets = {
-            key: QtWidgets.QWidget() for key in self.ACCEPTABLE_KEYS
+            key: QtWidgets.QWidget(self) for key in self.ACCEPTABLE_KEYS
         }
+
+        self.order_info_main_widget = QtWidgets.QWidget(self)
+
+        self.order_info_order_label = QtWidgets.QLabel(self)
 
         self.initUI()
 
@@ -229,7 +233,7 @@ class KaiUI(QtWidgets.QMainWindow):
         # TODO: Add buttons for add to order
         # TODO: IMPORTANT - Add a scrollbar to this- doesn't fit on my 1366x768 screen
         for p in sub_products:
-            widg = ProductInfo(p)
+            widg = ProductInfo(p, tab_widg)
             vbox.addWidget(widg)
             # vbox.addSpacing(1)
 
@@ -238,13 +242,16 @@ class KaiUI(QtWidgets.QMainWindow):
     def initUI(self):
         self.setWindowTitle("Kai")
 
+        self.order_info_order_label.setText("Get canceled")
+
         # Make it a *nice* window size
         self.setGeometry(QtCore.QRect(200, 100, 800, 600))
 
         # Set tab names, and add a tab to the thing
         for name, widg in self.products_tab_widgets.items():
-            self.products_tab.addTab(widg, name.capitalize())
+            self.products_tab.addTab(widg, f"{name.capitalize()}")
 
+            # This puts the actual objects into it
             self.setup_tab_widget(name)
 
         # Setting up central widget things
@@ -253,8 +260,15 @@ class KaiUI(QtWidgets.QMainWindow):
         # Main layout
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.products_tab)
-        # TODO: On the right of these tabs put all the buttons and stuff
 
+        # Layout of sidebar
+        order_vbox = QtWidgets.QVBoxLayout()
+        self.order_info_main_widget.setLayout(order_vbox)
+
+        order_vbox.addWidget(self.order_info_order_label)
+
+
+        hbox.addWidget(self.order_info_main_widget)
         self.centralWidget().setLayout(hbox)
 
     ## Setters/Setters
