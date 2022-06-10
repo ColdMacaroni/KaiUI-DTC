@@ -2,6 +2,7 @@
 # main.py
 # 2022-05-25
 
+from operator import contains
 from PySide6 import QtWidgets, QtCore
 from enum import Flag, Enum, auto
 
@@ -211,7 +212,7 @@ class KaiUI(QtWidgets.QMainWindow):
 
         # A QWidget for every possible tab
         self.products_tab_widgets = {
-            key: QtWidgets.QWidget(self) for key in self.ACCEPTABLE_KEYS
+            key: QtWidgets.QScrollArea(self) for key in self.ACCEPTABLE_KEYS
         }
 
         self.order_info_main_widget = QtWidgets.QWidget(self)
@@ -226,11 +227,9 @@ class KaiUI(QtWidgets.QMainWindow):
         that has the same key
         """
         tab_widg = self.products_tab_widgets[key]
+        tab_widg.setWidgetResizable(True)
 
-        tab_widg.setLayout(QtWidgets.QVBoxLayout())
-        tab_scroll = QtWidgets.QScrollArea(tab_widg)
-        tab_scroll.setWidget(QtWidgets.QWidget(tab_scroll))
-        tab_widg.layout().addWidget(tab_scroll)
+        container_widget = QtWidgets.QWidget(tab_widg)
 
         sub_products = self.products[key]
         vbox = QtWidgets.QVBoxLayout()
@@ -238,11 +237,13 @@ class KaiUI(QtWidgets.QMainWindow):
         # TODO: Add buttons for add to order
         # TODO: IMPORTANT - Add a scrollbar to this- doesn't fit on my 1366x768 screen
         for p in sub_products:
-            widg = ProductInfo(p, tab_scroll)
+            widg = ProductInfo(p, container_widget)
             vbox.addWidget(widg)
             # vbox.addSpacing(1)
         
-        tab_scroll.widget().setLayout(vbox)
+        container_widget.setLayout(vbox)
+        tab_widg.setWidget(container_widget)
+        
 
     def initUI(self):
         self.setWindowTitle("Kai")
