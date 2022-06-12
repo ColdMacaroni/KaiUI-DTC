@@ -119,18 +119,16 @@ class ProductInfo(QtWidgets.QFrame):
         self.main_widget = QtWidgets.QWidget()
 
         # TODO: Image label
-        # self.img_label = QtWidgets.QLabel()
-        # self.name_label = QtWidgets.QLabel(self)
-        # self.price_label = QtWidgets.QLabel(self)
-        # self.vegetarian_label = QtWidgets.QLabel(self)
-        # self.vegan_label = QtWidgets.QLabel(self)
-        # self.has_sugar_label = QtWidgets.QLabel(self)
 
         self.name_label = QtWidgets.QLabel(self.main_widget)
         self.price_label = QtWidgets.QLabel(self.main_widget)
         self.vegetarian_label = QtWidgets.QLabel(self.main_widget)
         self.vegan_label = QtWidgets.QLabel(self.main_widget)
         self.has_sugar_label = QtWidgets.QLabel(self.main_widget)
+        
+        self.add_button = QtWidgets.QPushButton(self.main_widget)
+        self.remove_button = QtWidgets.QPushButton(self.main_widget)
+        
         self.initUI()
 
     def initUI(self):
@@ -148,34 +146,51 @@ class ProductInfo(QtWidgets.QFrame):
         self.price_label.setText(f"${self.product.price:.02f}")
 
         self.vegetarian_label.setText(
-            f"Vegetarian: {'✅' if self.product.attributes & ProductAttribute.VEGETARIAN else '❎'}"
+            # f"Vegetarian: {'✅' if self.product.attributes & ProductAttribute.VEGETARIAN else '❎'}"
+            f"Vegetarian: {'Yes' if self.product.attributes & ProductAttribute.VEGETARIAN else 'No'}"
         )
 
         self.vegan_label.setText(
-            f"Vegan: {'✅' if self.product.attributes & ProductAttribute.VEGAN else '❎'}"
+            # f"Vegan: {'✅' if self.product.attributes & ProductAttribute.VEGAN else '❎'}"
+            f"Vegan: {'Yes' if self.product.attributes & ProductAttribute.VEGAN else 'No'}"
         )
 
         self.has_sugar_label.setText(
-            f"Sugar: {'✅' if self.product.attributes & ProductAttribute.HAS_SUGAR else '❎'}"
+            # f"Sugar: {'✅' if self.product.attributes & ProductAttribute.HAS_SUGAR else '❎'}"
+            f"Has sugar: {'Yes' if self.product.attributes & ProductAttribute.HAS_SUGAR else 'No'}"
         )
 
+        main_hbox = QtWidgets.QHBoxLayout()
+
         # Shove em all into a layout
-        vbox = QtWidgets.QVBoxLayout()
+        vbox_info = QtWidgets.QVBoxLayout()
 
         # These keeps them all compact and stops them from being stretched
-        vbox.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
+        vbox_info.setSizeConstraint(QtWidgets.QLayout.SetFixedSize)
 
-        vbox.addWidget(self.name_label)
-        vbox.addWidget(self.price_label)
-        vbox.addWidget(self.vegetarian_label)
-        vbox.addWidget(self.vegan_label)
-        vbox.addWidget(self.has_sugar_label)
+        vbox_info.addWidget(self.name_label)
+        vbox_info.addWidget(self.price_label)
+        vbox_info.addWidget(self.vegetarian_label)
+        vbox_info.addWidget(self.vegan_label)
+        vbox_info.addWidget(self.has_sugar_label)
+
+        main_hbox.addLayout(vbox_info)
+        main_hbox.addStretch(1)
+
+        vbox_buttons = QtWidgets.QVBoxLayout()
+        self.add_button.setText("Add")
+        self.remove_button.setText("Remove")
+
+        vbox_buttons.addWidget(self.add_button)
+        vbox_buttons.addWidget(self.remove_button)
+
+        main_hbox.addLayout(vbox_buttons)
 
         # This is the central widget
         self.setLayout(QtWidgets.QVBoxLayout())
         self.layout().addWidget(self.main_widget)
 
-        self.main_widget.setLayout(vbox)
+        self.main_widget.setLayout(main_hbox)
         self.show()
 
 
