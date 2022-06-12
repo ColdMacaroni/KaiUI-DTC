@@ -20,7 +20,7 @@ class ProductAttribute(Flag):
     HAS_SUGAR = auto()
 
 
-class Day(Flag):
+class Day(Enum):
     MONDAY = auto()
     TUESDAY = auto()
     WEDNESDAY = auto()
@@ -28,6 +28,25 @@ class Day(Flag):
     FRIDAY = auto()
     SATURDAY = auto()
     SUNDAY = auto()
+    
+    @classmethod
+    def name(cls, day):
+        return cls.name_dict.get(day, "Unknown")
+    
+    @classmethod
+    @property
+    def name_dict(cls):
+        names = {
+            cls.MONDAY: "Monday",
+            cls.TUESDAY: "Tuesday",
+            cls.WEDNESDAY: "Wednesday",
+            cls.THURSDAY: "Thursday",
+            cls.FRIDAY: "Friday",
+            cls.SATURDAY: "Saturday",
+            cls.SUNDAY: "Sunday"
+        }
+        
+        return names
 
 
 class Product:
@@ -104,6 +123,17 @@ class Special(Product):
     def __init__(self, day: Day, country: str, *args):
         super().__init__(*args)
         self.day = day
+        self.country = country
+
+    @property
+    def country(self):
+        return self._country
+
+    @country.setter
+    def country(self, new):
+        if not isinstance(new, str):
+            raise ValueError("country must be type str")
+        self._country = new
 
     @property
     def day(self):
@@ -138,6 +168,13 @@ class ProductInfo(QtWidgets.QFrame):
         self.vegan_label = QtWidgets.QLabel(self.main_widget)
         self.has_sugar_label = QtWidgets.QLabel(self.main_widget)
         
+        # Lets add item specific things :D
+        # :/ probably bad practice but whatever
+        # This isnt rust so i dont feel any remorse
+        if isinstance(self.product, Special):
+            self.country_label = QtWidgets.QLabel(self.main_widget)
+            self.day_label = QtWidgets.QLabel(self.main_widget)                
+
         self.add_button = QtWidgets.QPushButton(self.main_widget)
         self.remove_button = QtWidgets.QPushButton(self.main_widget)
         
@@ -195,6 +232,13 @@ class ProductInfo(QtWidgets.QFrame):
         vbox_info.addWidget(self.vegan_label)
         vbox_info.addWidget(self.has_sugar_label)
 
+        if isinstance(self.product, Special):
+            self.day_label.setText(f'Day available: {Day.name(self.product.day)}')
+            vbox_info.addWidget(self.day_label)
+
+            self.country_label.setText(f'Country of origin: {self.product.country}')
+            vbox_info.addWidget(self.country_label)
+                
         main_hbox.addLayout(vbox_info)
         main_hbox.addStretch(1)
 
@@ -249,6 +293,10 @@ class KaiUI(QtWidgets.QMainWindow):
         # Do the thing
         super().__init__(*args)
 
+        # The day used for specials
+        #TODO: Add getter and setter, checking if in dict
+        self.day = None
+
         # This will use the product item as they key and the value will be how many of those
         self.order = dict()
 
@@ -265,8 +313,8 @@ class KaiUI(QtWidgets.QMainWindow):
 
         self.order_info_main_widget = QtWidgets.QWidget(self)
 
-        self.order_info_order_listwidget = QtWidgets.QListWidget()
-        self.order_info_order_listwidget
+        self.order_info_day_combobox = QtWidgets.QComboBox(self)
+        self.order_info_order_listwidget = QtWidgets.QListWidget(self)
         self.order_info_price_label = QtWidgets.QLabel(self)
         self.order_info_order_button = QtWidgets.QPushButton(self)
 
@@ -279,6 +327,8 @@ class KaiUI(QtWidgets.QMainWindow):
     def order_button_clicked(self):
         # TODO: Export to json or smth, not my problem
         self.order.clear()
+        self.update_order_listwidget()
+        self.update_price_label()
 
     def product_button_add_clicked(self, product: Product):
         self.add_to_order(product)
@@ -291,10 +341,15 @@ class KaiUI(QtWidgets.QMainWindow):
             return
 
         # Remove one
-        self.order[product] -= 1  
+        self.order[product] -= 1 
+
+        # If there is nothing left then there is no point in showing it         
+        if self.order[product] == 0:
+            del self.order[product]        
+        self.update_order_listwidget()
+        self.update_price_label()
 
     def update_order_listwidget(self):
-        idx = self.order_info_order_listwidget.currentRow()
         self.order_info_order_listwidget.clear()
         
         # Add them in alphabetical order
@@ -305,9 +360,6 @@ class KaiUI(QtWidgets.QMainWindow):
             
             self.order_info_order_listwidget.addItem(f"{key.pretty_name} x{val}")
             
-        self.order_info_order_listwidget.setCurrentRow(idx)
-            
-
     def update_price_label(self):
         price = 0
         for product, num in self.order.items():
@@ -345,11 +397,61 @@ class KaiUI(QtWidgets.QMainWindow):
         container_widget.setLayout(vbox)
         tab_widg.setWidget(container_widget)
 
+    def find_product_by_pretty_name(self, listwidgetitem):
+        if listwidgetitem is None:
+            return None
+        
+        # Remove the product count
+        name = listwidgetitem.text()
+        name = name[:name.rfind('x') - 1]
+        
+        print(repr(name))
+
+        for p in self.order:
+            if p.pretty_name == name:
+                return p
+        
+        return None
+    
+    def day_combobox_currentTextChanged(self, txt):
+        # Check that all of the items can be ordered on this day
+        for idx in range(self.order_info_order_listwidget.count()):
+            product = self.find_product_by_pretty_name(self.order_info_order_listwidget.itemAt(0, idx))
+            if isinstance(product, Special) and Day.name(product.day) != txt:
+                QtWidgets.QMessageBox.critical(None, "Can't change day", "One or more products in your order are not available on that day")
+                
+                # Go back to where we were
+                self.order_info_day_combobox.setCurrentText(self.day)
+                
+                return
+        
+        # Update day
+        self.day = txt
+        
+        # Disable buttons
+        # QtWidgets.QPushButton.setEnabled(False)
+        
+        # In case there are no specials we just dont do anything
+        if "specials" not in self.products_tab_widgets:
+            return
+        
+        specials_tab = self.products_tab_widgets["specials"]
+        product_info_widgets = [specials_tab.widget().layout().itemAt(i).widget() for i in range(specials_tab.widget().layout().count())]
+        
+        for product_info in product_info_widgets:
+            if Day.name(product_info.product.day) != self.day:
+                product_info.add_button.setEnabled(False)
+                product_info.remove_button.setEnabled(False)
+            else:
+                product_info.add_button.setEnabled(True)
+                product_info.remove_button.setEnabled(True)
+
+
     def initUI(self):
         self.setWindowTitle("Kai")
 
         # Make it a *nice* window size
-        self.setGeometry(QtCore.QRect(200, 100, 800, 600))
+        self.setGeometry(QtCore.QRect(200, 100, 800, 500))
 
         # Set tab names, and add a tab to the thing
         for name, widg in self.products_tab_widgets.items():
@@ -374,17 +476,32 @@ class KaiUI(QtWidgets.QMainWindow):
         self.order_info_main_widget.setLayout(order_vbox)
 
         # Add stretch at the beggining to offset the stretch before the button
+        self.order_info_day_combobox.addItems(list(Day.name_dict.values()))
+        self.day = self.order_info_day_combobox.currentText()
+        
+        # Update stuff
+        self.day_combobox_currentTextChanged(self.day)
+        
+        self.order_info_day_combobox.currentTextChanged.connect(self.day_combobox_currentTextChanged)
+        order_vbox.addWidget(self.order_info_day_combobox)
+
         order_vbox.addStretch(1)
         
+        # This line gives pep8 nightmares
+        # It will remove one of the item you click on
+        # ListWidget only stores a string so i need to work back to find the corresponding product,
+        # once i do that i can just use the function for the button signal
+        self.order_info_order_listwidget.currentRowChanged.connect(lambda x: self.product_button_remove_clicked(self.find_product_by_pretty_name(self.order_info_order_listwidget.item(x))))
         order_vbox.addWidget(self.order_info_order_listwidget)
         
         self.update_price_label()
         order_vbox.addWidget(self.order_info_price_label)
 
         # I want the button at the bottom
-        order_vbox.addStretch(1)
+        order_vbox.addStretch(2)
 
         self.order_info_order_button.setText("Order")
+        self.order_info_order_button.clicked.connect(self.order_button_clicked)
         order_vbox.addWidget(self.order_info_order_button)
 
         hbox.addWidget(self.order_info_main_widget)
@@ -409,37 +526,38 @@ def main():
 
     # NOTE: This is probably better done with a ProductCategory class but whatever
     # TODO: Put all of this into a json, its giving me a headache just looking at it
+    # Vertically aligned code :D
     # fmt:off
     sandwiches = [
-        Sandwich("Ham & egg sandwich", 3.50),
-        Sandwich("Chicken mayo sandwich", 3.50),
-        Sandwich("Egg sandwich", 3.00, ProductAttribute.VEGETARIAN),
-        Sandwich("Beef sandwich", 3.80),
-        Sandwich("Salad sandwich", 3.20, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN),
+        Sandwich("Ham & egg sandwich",    3.50                                                      ),
+        Sandwich("Chicken mayo sandwich", 3.50                                                      ),
+        Sandwich("Egg sandwich",          3.00,                          ProductAttribute.VEGETARIAN),
+        Sandwich("Beef sandwich",         3.80                                                      ),
+        Sandwich("Salad sandwich",        3.20, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN),
     ]
 
     sushi = [
-        Sushi(SushiType.PIECES, "Chicken", 4.5, pieces=3),
-        Sushi(SushiType.PIECES, "Tuna", 4.5, pieces=3),
-        Sushi(SushiType.PIECES, "Avocado", 4.8, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN, pieces=3),
-        Sushi(SushiType.BOWL, "Chicken rice", 5.5, pieces=3),
-        Sushi(SushiType.BOWL, "Vegetarian rice", 5.5, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN)
+        Sushi(SushiType.PIECES, "Chicken",         4.5,                                                       pieces=3),
+        Sushi(SushiType.PIECES, "Tuna",            4.5,                                                       pieces=3),
+        Sushi(SushiType.PIECES, "Avocado",         4.8, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN, pieces=3),
+        Sushi(SushiType.BOWL,   "Chicken rice",    5.5,                                                               ),
+        Sushi(SushiType.BOWL,   "Vegetarian rice", 5.5, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN          ),
     ]
 
     drinks = [
-        Drink("Soda can", 2.00, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
-        Drink("Aloe vera drink", 3.50, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
-        Drink("Chocolate Milk", 3.50, ProductAttribute.HAS_SUGAR),
-        Drink("Water Bottle", 2.50, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN),
-        Drink("Instant hot chocolate", 1.50, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR)
+        Drink("Soda can",              2.00, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
+        Drink("Aloe vera drink",       3.50,                          ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
+        Drink("Chocolate Milk",        3.50,                                                        ProductAttribute.HAS_SUGAR),
+        Drink("Water Bottle",          2.50, ProductAttribute.VEGAN | ProductAttribute.VEGETARIAN                             ),
+        Drink("Instant hot chocolate", 1.50,                          ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
     ]
 
     specials = [
-        Special(Day.MONDAY,    "Samoa", "Kale moa",             6.00, ProductAttribute.HAS_SUGAR),
-        Special(Day.TUESDAY,   "South Africa", "Potjiekos",     6.00, ProductAttribute.NONE),
-        Special(Day.WEDNESDAY, "New Zealand (Māori)", "Hangi",  6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN),
-        Special(Day.THURSDAY,  "India", "Paneer tikka masala",  6.00, ProductAttribute.VEGETARIAN | ProductAttribute.HAS_SUGAR),
-        Special(Day.FRIDAY,    "China", "Chow mein",            6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN)
+        Special(Day.MONDAY,    "Samoa",               "Kale moa",             6.00,                                                        ProductAttribute.HAS_SUGAR                        ),
+        Special(Day.TUESDAY,   "South Africa",        "Potjiekos",            6.00,                                                                                     ProductAttribute.NONE),
+        Special(Day.WEDNESDAY, "New Zealand (Māori)", "Hangi",                6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN                                                     ),
+        Special(Day.THURSDAY,  "India",               "Paneer tikka masala",  6.00, ProductAttribute.VEGETARIAN |                          ProductAttribute.HAS_SUGAR                        ),
+        Special(Day.FRIDAY,    "China",               "Chow mein",            6.00, ProductAttribute.VEGETARIAN | ProductAttribute.VEGAN                                                     ),
     ]
     # fmt:on
 
