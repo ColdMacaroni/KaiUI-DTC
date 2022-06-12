@@ -1,8 +1,9 @@
 ##
 # main.py
 # 2022-05-25
+# A cool shop in Qt6 :D
+# Please read every single line of code.
 
-from operator import contains
 from PySide6 import QtWidgets, QtCore
 from enum import Flag, Enum, auto
 
@@ -39,6 +40,10 @@ class Product:
         self.attributes = attributes | ProductAttribute.NONE
         self.name = name
         self.price = price
+
+    @property
+    def pretty_name(self):
+        return self.name
 
     @property
     def name(self):
@@ -82,6 +87,13 @@ class Sushi(Product):
 
         if self.type is SushiType.PIECES:
             self.pieces = pieces
+    
+    @property
+    def pretty_name(self):
+        if self.type is SushiType.BOWL:
+            return f"{self.name} bowl"
+        elif self.type is SushiType.PIECES:
+            return f"{self.name} sushi ({self.pieces} pcs)"
 
 
 class Drink(Product):
@@ -130,6 +142,14 @@ class ProductInfo(QtWidgets.QFrame):
         self.remove_button = QtWidgets.QPushButton(self.main_widget)
         
         self.initUI()
+    
+    def set_add_button_clicked(self, func):
+        """ this function connects the buttons signal to the one given
+        sends this objects product as an argument"""
+        self.add_button.clicked.connect(lambda: func(self.product))
+
+    def set_remove_button_clicked(self, func):
+        self.remove_button.clicked.connect(lambda: func(self.product))
 
     def initUI(self):
         self.setFrameStyle(QtWidgets.QFrame.StyledPanel)
@@ -140,7 +160,8 @@ class ProductInfo(QtWidgets.QFrame):
         # self.setLineWidth(2)
 
         # Set up labels
-        self.name_label.setText(self.product.name)
+        # self.name_label.setText(self.product.name)
+        self.name_label.setText(self.product.pretty_name)
         self.name_label.setStyleSheet("font-size: 15pt")
 
         self.price_label.setText(f"${self.product.price:.02f}")
@@ -181,6 +202,7 @@ class ProductInfo(QtWidgets.QFrame):
         self.add_button.setText("Add")
         self.remove_button.setText("Remove")
 
+        # Signals will be connected to a function in the main window
         vbox_buttons.addWidget(self.add_button)
         vbox_buttons.addWidget(self.remove_button)
 
@@ -208,7 +230,15 @@ class KaiUI(QtWidgets.QMainWindow):
         It just doesnt sit right, you know?
         """
         return cls._ACCEPTABLE_KEYS
+    
+    def update_order_info(func):
+        """This decorator calls the function and then updates the listview and price label"""
+        def f(self, *args, **kwargs):
+            func(self, *args, **kwargs)
 
+            self.update_order_listwidget()
+            self.update_price_label()
+            
     def __init__(
         self, products: dict[str, list[Sandwich | Sushi | Drink | Special]], *args
     ):
@@ -218,6 +248,9 @@ class KaiUI(QtWidgets.QMainWindow):
         """
         # Do the thing
         super().__init__(*args)
+
+        # This will use the product item as they key and the value will be how many of those
+        self.order = dict()
 
         # 'Declare' the private one to avoid any possible issues with the setter
         self._products = {}
@@ -232,9 +265,55 @@ class KaiUI(QtWidgets.QMainWindow):
 
         self.order_info_main_widget = QtWidgets.QWidget(self)
 
-        self.order_info_order_label = QtWidgets.QLabel(self)
+        self.order_info_order_listwidget = QtWidgets.QListWidget()
+        self.order_info_order_listwidget
+        self.order_info_price_label = QtWidgets.QLabel(self)
+        self.order_info_order_button = QtWidgets.QPushButton(self)
 
         self.initUI()
+    
+    def add_to_order(self, product: Product):
+        # This epic one liner will set the value to 1 if the key doesnt exist or increase it by 1 if it does
+        self.order[product] = self.order.get(product, 0) + 1
+
+    def order_button_clicked(self):
+        # TODO: Export to json or smth, not my problem
+        self.order.clear()
+
+    def product_button_add_clicked(self, product: Product):
+        self.add_to_order(product)
+        self.update_order_listwidget()
+        self.update_price_label()
+    
+    def product_button_remove_clicked(self, product: Product):
+        # Nothing to do
+        if product not in self.order:
+            return
+
+        # Remove one
+        self.order[product] -= 1  
+
+    def update_order_listwidget(self):
+        idx = self.order_info_order_listwidget.currentRow()
+        self.order_info_order_listwidget.clear()
+        
+        # Add them in alphabetical order
+        for key, val in self.order.items():
+            # Only accept natural numbers
+            if not val > 0:
+                continue
+            
+            self.order_info_order_listwidget.addItem(f"{key.pretty_name} x{val}")
+            
+        self.order_info_order_listwidget.setCurrentRow(idx)
+            
+
+    def update_price_label(self):
+        price = 0
+        for product, num in self.order.items():
+            price += product.price * num
+
+        self.order_info_price_label.setText(f"Total: ${price:.02f}")
 
     def setup_tab_widget(self, key):
         """
@@ -249,21 +328,25 @@ class KaiUI(QtWidgets.QMainWindow):
         sub_products = self.products[key]
         vbox = QtWidgets.QVBoxLayout()
 
-        # TODO: Add buttons for add to order
-        # TODO: IMPORTANT - Add a scrollbar to this- doesn't fit on my 1366x768 screen
         for p in sub_products:
             widg = ProductInfo(p, container_widget)
+            
+            # Connect Add and Remove button signals
+            # This is done inside the object itself because on a for loop with a lambda function, the lambda
+            # would always call the connected function with the loop's last value. Not what we want.
+            # Doing it this way avoids that.
+            widg.set_add_button_clicked(self.product_button_add_clicked)
+            widg.set_remove_button_clicked(self.product_button_remove_clicked)
+            # widg.add_button.clicked.connect(lambda: self.product_button_add_clicked(widg.product))
+            # widg.remove_button.clicked.connect(lambda: self.product_button_remove_clicked(widg.product))
+
             vbox.addWidget(widg)
-            # vbox.addSpacing(1)
-        
+            
         container_widget.setLayout(vbox)
         tab_widg.setWidget(container_widget)
-        
 
     def initUI(self):
         self.setWindowTitle("Kai")
-
-        self.order_info_order_label.setText("Get canceled")
 
         # Make it a *nice* window size
         self.setGeometry(QtCore.QRect(200, 100, 800, 600))
@@ -281,13 +364,28 @@ class KaiUI(QtWidgets.QMainWindow):
         # Main layout
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.products_tab)
+        
+        # This will make the product tabs occupy two thirds of the window width by default
+        # and then grow more than the list widget
+        hbox.setStretch(0, 2)        
 
         # Layout of sidebar
         order_vbox = QtWidgets.QVBoxLayout()
         self.order_info_main_widget.setLayout(order_vbox)
 
-        order_vbox.addWidget(self.order_info_order_label)
+        # Add stretch at the beggining to offset the stretch before the button
+        order_vbox.addStretch(1)
+        
+        order_vbox.addWidget(self.order_info_order_listwidget)
+        
+        self.update_price_label()
+        order_vbox.addWidget(self.order_info_price_label)
 
+        # I want the button at the bottom
+        order_vbox.addStretch(1)
+
+        self.order_info_order_button.setText("Order")
+        order_vbox.addWidget(self.order_info_order_button)
 
         hbox.addWidget(self.order_info_main_widget)
         self.centralWidget().setLayout(hbox)
