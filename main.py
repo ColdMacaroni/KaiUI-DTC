@@ -28,11 +28,11 @@ class Day(Enum):
     FRIDAY = auto()
     SATURDAY = auto()
     SUNDAY = auto()
-    
+
     @classmethod
     def name(cls, day):
         return cls.name_dict.get(day, "Unknown")
-    
+
     @classmethod
     @property
     def name_dict(cls):
@@ -43,9 +43,9 @@ class Day(Enum):
             cls.THURSDAY: "Thursday",
             cls.FRIDAY: "Friday",
             cls.SATURDAY: "Saturday",
-            cls.SUNDAY: "Sunday"
+            cls.SUNDAY: "Sunday",
         }
-        
+
         return names
 
 
@@ -106,7 +106,7 @@ class Sushi(Product):
 
         if self.type is SushiType.PIECES:
             self.pieces = pieces
-    
+
     @property
     def pretty_name(self):
         if self.type is SushiType.BOWL:
@@ -167,21 +167,21 @@ class ProductInfo(QtWidgets.QFrame):
         self.vegetarian_label = QtWidgets.QLabel(self.main_widget)
         self.vegan_label = QtWidgets.QLabel(self.main_widget)
         self.has_sugar_label = QtWidgets.QLabel(self.main_widget)
-        
+
         # Lets add item specific things :D
         # :/ probably bad practice but whatever
         # This isnt rust so i dont feel any remorse
         if isinstance(self.product, Special):
             self.country_label = QtWidgets.QLabel(self.main_widget)
-            self.day_label = QtWidgets.QLabel(self.main_widget)                
+            self.day_label = QtWidgets.QLabel(self.main_widget)
 
         self.add_button = QtWidgets.QPushButton(self.main_widget)
         self.remove_button = QtWidgets.QPushButton(self.main_widget)
-        
+
         self.initUI()
-    
+
     def set_add_button_clicked(self, func):
-        """ this function connects the buttons signal to the one given
+        """this function connects the buttons signal to the one given
         sends this objects product as an argument"""
         self.add_button.clicked.connect(lambda: func(self.product))
 
@@ -233,12 +233,12 @@ class ProductInfo(QtWidgets.QFrame):
         vbox_info.addWidget(self.has_sugar_label)
 
         if isinstance(self.product, Special):
-            self.day_label.setText(f'Day available: {Day.name(self.product.day)}')
+            self.day_label.setText(f"Day available: {Day.name(self.product.day)}")
             vbox_info.addWidget(self.day_label)
 
-            self.country_label.setText(f'Country of origin: {self.product.country}')
+            self.country_label.setText(f"Country of origin: {self.product.country}")
             vbox_info.addWidget(self.country_label)
-                
+
         main_hbox.addLayout(vbox_info)
         main_hbox.addStretch(1)
 
@@ -274,15 +274,16 @@ class KaiUI(QtWidgets.QMainWindow):
         It just doesnt sit right, you know?
         """
         return cls._ACCEPTABLE_KEYS
-    
+
     def update_order_info(func):
         """This decorator calls the function and then updates the listview and price label"""
+
         def f(self, *args, **kwargs):
             func(self, *args, **kwargs)
 
             self.update_order_listwidget()
             self.update_price_label()
-            
+
     def __init__(
         self, products: dict[str, list[Sandwich | Sushi | Drink | Special]], *args
     ):
@@ -294,7 +295,7 @@ class KaiUI(QtWidgets.QMainWindow):
         super().__init__(*args)
 
         # The day used for specials
-        #TODO: Add getter and setter, checking if in dict
+        # TODO: Add getter and setter, checking if in dict
         self.day = None
 
         # This will use the product item as they key and the value will be how many of those
@@ -319,7 +320,7 @@ class KaiUI(QtWidgets.QMainWindow):
         self.order_info_order_button = QtWidgets.QPushButton(self)
 
         self.initUI()
-    
+
     def add_to_order(self, product: Product):
         # This epic one liner will set the value to 1 if the key doesnt exist or increase it by 1 if it does
         self.order[product] = self.order.get(product, 0) + 1
@@ -334,32 +335,32 @@ class KaiUI(QtWidgets.QMainWindow):
         self.add_to_order(product)
         self.update_order_listwidget()
         self.update_price_label()
-    
+
     def product_button_remove_clicked(self, product: Product):
         # Nothing to do
         if product not in self.order:
             return
 
         # Remove one
-        self.order[product] -= 1 
+        self.order[product] -= 1
 
-        # If there is nothing left then there is no point in showing it         
+        # If there is nothing left then there is no point in showing it
         if self.order[product] == 0:
-            del self.order[product]        
+            del self.order[product]
         self.update_order_listwidget()
         self.update_price_label()
 
     def update_order_listwidget(self):
         self.order_info_order_listwidget.clear()
-        
+
         # Add them in alphabetical order
         for key, val in self.order.items():
             # Only accept natural numbers
             if not val > 0:
                 continue
-            
+
             self.order_info_order_listwidget.addItem(f"{key.pretty_name} x{val}")
-            
+
     def update_price_label(self):
         price = 0
         for product, num in self.order.items():
@@ -382,7 +383,7 @@ class KaiUI(QtWidgets.QMainWindow):
 
         for p in sub_products:
             widg = ProductInfo(p, container_widget)
-            
+
             # Connect Add and Remove button signals
             # This is done inside the object itself because on a for loop with a lambda function, the lambda
             # would always call the connected function with the loop's last value. Not what we want.
@@ -393,51 +394,58 @@ class KaiUI(QtWidgets.QMainWindow):
             # widg.remove_button.clicked.connect(lambda: self.product_button_remove_clicked(widg.product))
 
             vbox.addWidget(widg)
-            
+
         container_widget.setLayout(vbox)
         tab_widg.setWidget(container_widget)
 
     def find_product_by_pretty_name(self, listwidgetitem):
         if listwidgetitem is None:
             return None
-        
+
         # Remove the product count
         name = listwidgetitem.text()
-        name = name[:name.rfind('x') - 1]
-        
-        print(repr(name))
+        name = name[: name.rfind("x") - 1]
 
         for p in self.order:
             if p.pretty_name == name:
                 return p
-        
+
         return None
-    
+
     def day_combobox_currentTextChanged(self, txt):
         # Check that all of the items can be ordered on this day
         for idx in range(self.order_info_order_listwidget.count()):
-            product = self.find_product_by_pretty_name(self.order_info_order_listwidget.itemAt(0, idx))
+            product = self.find_product_by_pretty_name(
+                self.order_info_order_listwidget.itemAt(0, idx)
+            )
             if isinstance(product, Special) and Day.name(product.day) != txt:
-                QtWidgets.QMessageBox.critical(None, "Can't change day", "One or more products in your order are not available on that day")
-                
+                QtWidgets.QMessageBox.critical(
+                    None,
+                    "Can't change day",
+                    "One or more products in your order are not available on that day",
+                )
+
                 # Go back to where we were
                 self.order_info_day_combobox.setCurrentText(self.day)
-                
+
                 return
-        
+
         # Update day
         self.day = txt
-        
+
         # Disable buttons
         # QtWidgets.QPushButton.setEnabled(False)
-        
+
         # In case there are no specials we just dont do anything
         if "specials" not in self.products_tab_widgets:
             return
-        
+
         specials_tab = self.products_tab_widgets["specials"]
-        product_info_widgets = [specials_tab.widget().layout().itemAt(i).widget() for i in range(specials_tab.widget().layout().count())]
-        
+        product_info_widgets = [
+            specials_tab.widget().layout().itemAt(i).widget()
+            for i in range(specials_tab.widget().layout().count())
+        ]
+
         for product_info in product_info_widgets:
             if Day.name(product_info.product.day) != self.day:
                 product_info.add_button.setEnabled(False)
@@ -445,7 +453,6 @@ class KaiUI(QtWidgets.QMainWindow):
             else:
                 product_info.add_button.setEnabled(True)
                 product_info.remove_button.setEnabled(True)
-
 
     def initUI(self):
         self.setWindowTitle("Kai")
@@ -466,10 +473,10 @@ class KaiUI(QtWidgets.QMainWindow):
         # Main layout
         hbox = QtWidgets.QHBoxLayout()
         hbox.addWidget(self.products_tab)
-        
+
         # This will make the product tabs occupy two thirds of the window width by default
         # and then grow more than the list widget
-        hbox.setStretch(0, 2)        
+        hbox.setStretch(0, 2)
 
         # Layout of sidebar
         order_vbox = QtWidgets.QVBoxLayout()
@@ -478,22 +485,30 @@ class KaiUI(QtWidgets.QMainWindow):
         # Add stretch at the beggining to offset the stretch before the button
         self.order_info_day_combobox.addItems(list(Day.name_dict.values()))
         self.day = self.order_info_day_combobox.currentText()
-        
+
         # Update stuff
         self.day_combobox_currentTextChanged(self.day)
-        
-        self.order_info_day_combobox.currentTextChanged.connect(self.day_combobox_currentTextChanged)
+
+        self.order_info_day_combobox.currentTextChanged.connect(
+            self.day_combobox_currentTextChanged
+        )
         order_vbox.addWidget(self.order_info_day_combobox)
 
         order_vbox.addStretch(1)
-        
+
         # This line gives pep8 nightmares
         # It will remove one of the item you click on
         # ListWidget only stores a string so i need to work back to find the corresponding product,
         # once i do that i can just use the function for the button signal
-        self.order_info_order_listwidget.currentRowChanged.connect(lambda x: self.product_button_remove_clicked(self.find_product_by_pretty_name(self.order_info_order_listwidget.item(x))))
+        self.order_info_order_listwidget.currentRowChanged.connect(
+            lambda x: self.product_button_remove_clicked(
+                self.find_product_by_pretty_name(
+                    self.order_info_order_listwidget.item(x)
+                )
+            )
+        )
         order_vbox.addWidget(self.order_info_order_listwidget)
-        
+
         self.update_price_label()
         order_vbox.addWidget(self.order_info_price_label)
 
