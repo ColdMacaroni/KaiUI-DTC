@@ -415,9 +415,11 @@ class KaiUI(QtWidgets.QMainWindow):
     def day_combobox_currentTextChanged(self, txt):
         # Check that all of the items can be ordered on this day
         for idx in range(self.order_info_order_listwidget.count()):
+            # Get the obj
             product = self.find_product_by_pretty_name(
-                self.order_info_order_listwidget.itemAt(0, idx)
+                self.order_info_order_listwidget.item(idx)
             )
+
             if isinstance(product, Special) and Day.name(product.day) != txt:
                 QtWidgets.QMessageBox.critical(
                     None,
